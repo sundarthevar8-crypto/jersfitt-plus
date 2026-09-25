@@ -1,0 +1,147 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String
+  password  String
+  phone     String?
+  role      String    @default("CUSTOMER") // "CUSTOMER" or "ADMIN"
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  addresses Address[]
+  orders    Order[]
+  reviews   Review[]
+}
+
+model Address {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName   String
+  phone      String
+  address    String
+  city       String
+  state      String
+  postalCode String
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model Product {
+  id               String           @id @default(cuid())
+  slug             String           @unique
+  name             String
+  tagline          String?
+  description      String
+  price            Float
+  compareAtPrice   Float?
+  isFeatured       Boolean          @default(false)
+  inStock          Boolean          @default(true)
+  images           String           // JSON stringified array of image URLs
+  category         String           @default("Jerseys")
+  edition          String           @default("Home Edition")
+  primaryColor     String           @default("Black / Electric Blue")
+  specifications   String?          // JSON string or markdown
+  careInstructions String?          // JSON string or markdown
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  variants         ProductVariant[]
+  reviews          Review[]
+  orderItems       OrderItem[]
+}
+
+model ProductVariant {
+  id              String   @id @default(cuid())
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size            String   // "S", "M", "L", "XL", "XXL"
+  sku             String   @unique
+  stock           Int      @default(20)
+  priceAdjustment Float    @default(0)
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  orderNumber       String      @unique // e.g. JP-847291
+  userId            String?
+  user              User?       @relation(fields: [userId], references: [id])
+  customerName      String
+  customerEmail     String
+  customerPhone     String
+  shippingAddress   String
+  city              String
+  state             String
+  postalCode        String
+  orderNotes        String?
+  subtotal          Float
+  shippingFee       Float       @default(0)
+  codCharge         Float       @default(0)
+  discount          Float       @default(0)
+  totalAmount       Float
+  paymentMethod     String      // "COD", "UPI_ONLINE", "RAZORPAY"
+  paymentStatus     String      @default("PENDING") // "PENDING", "PAID", "FAILED"
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  orderStatus       String      @default("PLACED") // "PLACED", "CONFIRMED", "PACKED", "SHIPPED", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED"
+  trackingNotes     String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  items             OrderItem[]
+}
+
+model OrderItem {
+  id           String   @id @default(cuid())
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId    String?
+  product      Product? @relation(fields: [productId], references: [id])
+  productName  String
+  productImage String
+  size         String
+  quantity     Int
+  unitPrice    Float
+  totalPrice   Float
+}
+
+model Review {
+  id                 String   @id @default(cuid())
+  productId          String
+  product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId             String?
+  user               User?    @relation(fields: [userId], references: [id])
+  authorName         String
+  authorEmail        String
+  rating             Int      @default(5)
+  title              String
+  comment            String
+  isVerifiedPurchase Boolean  @default(true)
+  isApproved         Boolean  @default(true)
+  createdAt          DateTime @default(now())
+}
+
+model Coupon {
+  id             String    @id @default(cuid())
+  code           String    @unique
+  discountType   String    @default("PERCENTAGE") // "PERCENTAGE" or "FIXED"
+  discountValue  Float
+  minOrderAmount Float     @default(0)
+  maxDiscount    Float?
+  isActive       Boolean   @default(true)
+  validUntil     DateTime?
+}
+
+model SiteSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+}
